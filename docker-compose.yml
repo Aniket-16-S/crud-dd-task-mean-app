@@ -1,0 +1,64 @@
+version: "3.9"
+
+# ──────────────────────────────────────────────────────────────
+# MEAN Stack — Docker Compose
+# Services: frontend (Angular/Nginx) · backend (Node/Express) · mongodb
+# ──────────────────────────────────────────────────────────────
+
+services:
+
+  # ── MongoDB ────────────────────────────────────────────────
+  mongodb:
+    image: mongo:6.0
+    container_name: mean_mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: crud_db
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - mean_network
+
+  # ── Backend (Node / Express) ───────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mean_backend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: 8080
+      # Mongoose connection string — uses the mongodb service name as host
+      MONGO_URI: mongodb://mongodb:27017/crud_db
+    depends_on:
+      - mongodb
+    networks:
+      - mean_network
+
+  # ── Frontend (Angular → Nginx) ─────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: mean_frontend
+    restart: unless-stopped
+    ports:
+      - "4200:80" # Access the app at http://localhost:4200
+    depends_on:
+      - backend
+    networks:
+      - mean_network
+
+# ── Volumes ────────────────────────────────────────────────────
+volumes:
+  mongo_data:
+    driver: local
+
+# ── Networks ───────────────────────────────────────────────────
+networks:
+  mean_network:
+    driver: bridge
